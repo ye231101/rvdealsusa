@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { InventoryUnit } from '@/lib/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -374,11 +375,10 @@ export const minPrices = [
   { label: '$500,000', value: '500000' },
   { label: '$750,000', value: '750000' },
   { label: '$1,000,000', value: '1000000' },
-
 ];
 
 export const maxPrices = [
-  { label: '$25,000', value: '25000' }, 
+  { label: '$25,000', value: '25000' },
   { label: '$50,000', value: '50000' },
   { label: '$75,000', value: '75000' },
   { label: '$100,000', value: '100000' },
@@ -386,6 +386,12 @@ export const maxPrices = [
   { label: '$500,000', value: '500000' },
   { label: '$750,000', value: '750000' },
   { label: '$1,000,000', value: '1000000' },
+];
+
+export const lengthOptions = [
+  { label: 'Under 25 ft', value: 'compact' },
+  { label: '25-35 ft', value: 'mid' },
+  { label: 'Over 35 ft', value: 'long' },
 ];
 
 export const locations = [
@@ -440,4 +446,44 @@ export function labelFromCustomTags(customTags: string[] | undefined, key: strin
   const value = tag.split(':')[1].trim();
   if (!value) return null;
   return labelFromValue(value);
+}
+
+export function getInventoryPricing(unit: InventoryUnit) {
+  const num = (value: number | undefined) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const firstPositive = (...values: number[]) => values.find((value) => value > 0) ?? 0;
+
+  const msrp = num(unit.wI_ListPrice);
+  const mapPrice = num(unit.wI_MapPrice);
+  const salePrice = num(unit.wI_SalePrice);
+  const websitePrice = num(unit.websitePrice);
+  const rebateAmount = num(unit.rebate?.amount);
+
+  const displayPrice = firstPositive(websitePrice, salePrice, mapPrice, msrp);
+  const netPrice = displayPrice > 0 && rebateAmount > 0 ? Math.max(displayPrice - rebateAmount, 0) : displayPrice;
+
+  const discountAmount = msrp && displayPrice && msrp > displayPrice ? msrp - displayPrice : 0;
+  const savingAmount = msrp && netPrice && msrp > netPrice ? msrp - netPrice : 0;
+  const percentOff = savingAmount && msrp ? Math.round((savingAmount / msrp) * 100) : 0;
+
+  const isTooLowToShow = Boolean(unit.isTooLowToShow);
+
+  return {
+    msrp,
+    mapPrice,
+    salePrice,
+    websitePrice,
+    rebateAmount,
+    displayPrice,
+    netPrice,
+    discountAmount,
+    savingAmount,
+    percentOff,
+
+    isTooLowToShow,
+
+    showDetailedBreakdown: Boolean(rebateAmount && displayPrice && !isTooLowToShow),
+  };
 }

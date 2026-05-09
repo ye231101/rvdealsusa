@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useViewProWidget } from '@/components/view-pro-widget-provider';
-import { formatPrice, formatMileage, formatSlideouts, rebateEndsLabel } from '@/lib/utils';
+import { formatPrice, formatMileage, formatSlideouts, rebateEndsLabel, getInventoryPricing } from '@/lib/utils';
 import type { InventoryUnit } from '@/lib/types';
 
 export function InventoryCard({ unit }: { unit: InventoryUnit }) {
@@ -61,16 +61,19 @@ export function InventoryCard({ unit }: { unit: InventoryUnit }) {
     };
   }, [emblaApi, onSelect]);
 
-  const classLabel = unit.wI_Body;
-  const msrp = unit.wI_ListPrice;
-  const salePrice = unit.websitePrice ?? 0;
-  const hasWebsitePrice = salePrice > 0;
-  const discountPct = msrp > 0 ? Math.round((1 - salePrice / msrp) * 100) : 0;
-  const savings = Math.max(0, msrp - salePrice);
-  const hasRebateBreakdown = Boolean(unit.rebate?.amount && unit.rebate.amount > 0) && !unit.isTooLowToShow;
-  const listMinusSale = Math.max(0, msrp - salePrice);
-  const netAfterRebate = hasRebateBreakdown ? Math.max(0, salePrice - (unit.rebate?.amount ?? 0)) : salePrice;
-  const rebateFootnote = hasRebateBreakdown && unit.rebate ? rebateEndsLabel(unit.rebate.enddate) : null;
+  const {
+    msrp,
+    rebateAmount,
+    displayPrice,
+    netPrice,
+    discountAmount,
+    savingAmount,
+    percentOff,
+    isTooLowToShow,
+    showDetailedBreakdown,
+  } = getInventoryPricing(unit);
+
+  const rebateFootnote = showDetailedBreakdown && unit.rebate ? rebateEndsLabel(unit.rebate.enddate) : null;
 
   return (
     <article
@@ -164,12 +167,12 @@ export function InventoryCard({ unit }: { unit: InventoryUnit }) {
           </div>
         </div>
 
-        {unit.isTooLowToShow ? (
-          hasWebsitePrice || msrp > 0 ? (
+        {isTooLowToShow ? (
+          displayPrice > 0 || msrp > 0 ? (
             <div className="flex-1 space-y-1">
-              {hasWebsitePrice ? (
+              {displayPrice > 0 && (msrp <= 0 || displayPrice !== msrp) ? (
                 <p className="text-xl font-bold tracking-tight text-neutral-900 line-through decoration-neutral-900/75">
-                  {formatPrice(salePrice)}
+                  {formatPrice(displayPrice)}
                 </p>
               ) : null}
               {msrp > 0 ? (
@@ -181,54 +184,58 @@ export function InventoryCard({ unit }: { unit: InventoryUnit }) {
           ) : (
             <div className="flex-1" />
           )
-        ) : !hasWebsitePrice ? (
+        ) : displayPrice <= 0 ? (
           <div className="flex-1" />
-        ) : hasRebateBreakdown ? (
+        ) : showDetailedBreakdown ? (
           <div className="space-y-2">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="text-neutral-800">MSRP</span>
-              <span className="shrink-0 font-medium text-neutral-900 tabular-nums">{formatPrice(msrp)}</span>
-            </div>
-            {listMinusSale > 0 ? (
+            {msrp > 0 ? (
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-neutral-800">MSRP</span>
+                <span className="shrink-0 font-medium text-neutral-900 tabular-nums">{formatPrice(msrp)}</span>
+              </div>
+            ) : null}
+            {discountAmount > 0 ? (
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="text-neutral-800">Discount</span>
                 <span className="shrink-0 font-semibold text-green-800 tabular-nums">
-                  {`- ${formatPrice(listMinusSale)}`}
+                  {`- ${formatPrice(discountAmount)}`}
                 </span>
               </div>
             ) : null}
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="text-neutral-800">Sale Price</span>
-              <span className="shrink-0 font-medium text-neutral-900 tabular-nums">{formatPrice(salePrice)}</span>
+              <span className="shrink-0 font-medium text-neutral-900 tabular-nums">{formatPrice(displayPrice)}</span>
             </div>
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="text-neutral-800">Manufacturer Rebate</span>
               <span className="shrink-0 font-semibold text-green-800 tabular-nums">
-                {`- ${formatPrice(unit.rebate!.amount)}`}
+                {`- ${formatPrice(rebateAmount)}`}
               </span>
             </div>
             <div className="flex items-baseline justify-between gap-3 text-lg font-bold">
               <span className="text-neutral-800">Net Price</span>
-              <span className="shrink-0 font-bold text-neutral-900 tabular-nums">{formatPrice(netAfterRebate)}</span>
+              <span className="shrink-0 font-bold text-neutral-900 tabular-nums">{formatPrice(netPrice)}</span>
             </div>
             {rebateFootnote ? <p className="text-xs text-neutral-500">{rebateFootnote}</p> : null}
           </div>
-        ) : savings > 0 ? (
+        ) : savingAmount > 0 ? (
           <div className="flex-1 space-y-1.5">
             <div className="flex flex-wrap items-baseline gap-2.5">
-              <span className="text-2xl font-bold text-red-800 tabular-nums">-{discountPct}%</span>
-              <span className="text-2xl font-bold text-neutral-900 tabular-nums">{formatPrice(salePrice)}</span>
+              <span className="text-2xl font-bold text-red-800 tabular-nums">-{percentOff}%</span>
+              <span className="text-2xl font-bold text-neutral-900 tabular-nums">{formatPrice(displayPrice)}</span>
             </div>
-            <p className="text-sm text-neutral-800">
-              {unit.wI_InventoryType === 'Used' ? 'Was' : 'MSRP'}{' '}
-              <span className="line-through">{formatPrice(msrp)}</span>
-            </p>
-            <p className="text-sm font-semibold text-green-800 tabular-nums">You save {formatPrice(savings)}</p>
+            {msrp > 0 ? (
+              <p className="text-sm text-neutral-800">
+                {unit.wI_InventoryType === 'Used' ? 'Was' : 'MSRP'}{' '}
+                <span className="line-through">{formatPrice(msrp)}</span>
+              </p>
+            ) : null}
+            <p className="text-sm font-semibold text-green-800 tabular-nums">You save {formatPrice(savingAmount)}</p>
           </div>
         ) : (
           <div className="flex-1 space-y-1">
-            <p className="text-2xl font-bold text-neutral-900 tabular-nums">{formatPrice(salePrice)}</p>
-            {msrp > salePrice + 0.5 ? (
+            <p className="text-2xl font-bold text-neutral-900 tabular-nums">{formatPrice(displayPrice)}</p>
+            {msrp > displayPrice + 0.5 ? (
               <span className="text-sm">
                 {unit.wI_InventoryType === 'Used' ? 'Was' : 'MSRP'}{' '}
                 <span className="text-neutral-800 line-through">{formatPrice(msrp)}</span>
@@ -242,7 +249,7 @@ export function InventoryCard({ unit }: { unit: InventoryUnit }) {
         <div className="grid grid-cols-3 gap-x-2 gap-y-3.5">
           <div className="flex min-w-0 items-center gap-1.5">
             <Bus className="size-4 shrink-0 text-neutral-500" strokeWidth={2} />
-            <span className="truncate text-xs text-neutral-500">{classLabel}</span>
+            <span className="truncate text-xs text-neutral-500">{unit.wI_Body}</span>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
             <Fuel className="size-4 shrink-0 text-neutral-500" strokeWidth={2} />

@@ -6,7 +6,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { Camera, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useViewProWidget } from '@/components/view-pro-widget-provider';
-import { formatPrice, formatSlideouts } from '@/lib/utils';
+import { formatPrice, formatSlideouts, getInventoryPricing } from '@/lib/utils';
 import type { InventoryUnit } from '@/lib/types';
 
 export function LandingDealCard({ unit }: { unit: InventoryUnit }) {
@@ -43,11 +43,7 @@ export function LandingDealCard({ unit }: { unit: InventoryUnit }) {
     };
   }, [emblaApi, onSelect]);
 
-  const msrp = unit.wI_ListPrice;
-  const salePrice = unit.websitePrice ?? 0;
-  const hasWebsitePrice = salePrice > 0;
-  const hasRebateBreakdown = Boolean(unit.rebate?.amount && unit.rebate.amount > 0) && !unit.isTooLowToShow;
-  const netAfterRebate = hasRebateBreakdown ? Math.max(0, salePrice - (unit.rebate?.amount ?? 0)) : salePrice;
+  const { msrp, displayPrice, savingAmount } = getInventoryPricing(unit);
 
   const specLine = [
     unit.wI_Body,
@@ -59,12 +55,17 @@ export function LandingDealCard({ unit }: { unit: InventoryUnit }) {
 
   const pricingBlock = (() => {
     if (unit.isTooLowToShow) {
-      if (hasWebsitePrice || msrp > 0) {
+      if (displayPrice > 0 || msrp > 0) {
         return (
           <div className="flex min-w-0 flex-col gap-1">
-            {hasWebsitePrice ? (
-              <p className="text-lg font-bold text-neutral-400 tabular-nums line-through decoration-neutral-400">
-                {formatPrice(salePrice)}
+            {displayPrice > 0 && (msrp <= 0 || displayPrice !== msrp) ? (
+              <p className="text-xl font-bold tracking-tight text-neutral-900 line-through decoration-neutral-900/75">
+                {formatPrice(displayPrice)}
+              </p>
+            ) : null}
+            {msrp > 0 ? (
+              <p className="text-sm leading-snug text-neutral-800 tabular-nums line-through">
+                MSRP {formatPrice(msrp)}
               </p>
             ) : null}
           </div>
@@ -73,20 +74,20 @@ export function LandingDealCard({ unit }: { unit: InventoryUnit }) {
       return <p className="text-lg font-bold text-neutral-900">Call for price</p>;
     }
 
-    if (!hasWebsitePrice) {
+    if (displayPrice <= 0) {
       return <p className="text-lg font-bold text-neutral-900">Call for price</p>;
     }
 
-    const currentDisplay = hasRebateBreakdown ? netAfterRebate : salePrice;
-    const saveFromMsrp = msrp > currentDisplay + 0.5 ? msrp - currentDisplay : 0;
-
     return (
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <p className="text-primary text-2xl leading-tight font-bold tracking-tight tabular-nums sm:text-[1.65rem]">
-          {formatPrice(currentDisplay)}
+      <div className="flex min-w-0 flex-col gap-1 text-left">
+        {msrp > 0 ? (
+          <p className="text-sm leading-snug text-neutral-800 tabular-nums line-through">MSRP {formatPrice(msrp)}</p>
+        ) : null}
+        <p className="text-[1.65rem] leading-none font-bold tracking-tight text-[#D0021B] tabular-nums sm:text-[1.75rem]">
+          {formatPrice(displayPrice)}
         </p>
-        {saveFromMsrp > 0 ? (
-          <p className="text-sm font-semibold text-green-700 tabular-nums">You Save {formatPrice(saveFromMsrp)}</p>
+        {savingAmount > 0 ? (
+          <p className="text-sm font-semibold text-[#28a745] tabular-nums">You Save {formatPrice(savingAmount)}</p>
         ) : null}
       </div>
     );

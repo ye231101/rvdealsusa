@@ -110,6 +110,7 @@ function parseSizeParam(value: string | null): number {
 }
 
 async function fetchInventories(params: {
+  type: 'deals' | null;
   currentPage: number;
   perPage: number;
   minPrice: string | null;
@@ -129,6 +130,9 @@ async function fetchInventories(params: {
     currentPage: params.currentPage,
     perPage: params.perPage,
   };
+  if (params.type === 'deals') {
+    query.type = 'deals';
+  }
   if (params.minPrice != null && params.minPrice !== '') {
     query.minPrice = params.minPrice;
   }
@@ -178,6 +182,7 @@ async function fetchInventories(params: {
 }
 
 function buildInventoryQuery(params: {
+  type: 'deals' | null;
   page: number;
   perPage: number;
   minPrice: string | null;
@@ -194,6 +199,7 @@ function buildInventoryQuery(params: {
   sortBy: SortByValue;
 }): URLSearchParams {
   const searchParams = new URLSearchParams();
+  if (params.type === 'deals') searchParams.set('type', 'deals');
   if (params.page > 1) searchParams.set('page', String(params.page));
   if (params.perPage !== 20) searchParams.set('size', String(params.perPage));
   if (params.minPrice != null && params.minPrice !== '') searchParams.set('minPrice', params.minPrice);
@@ -234,6 +240,7 @@ export default function InventoryPage() {
 
   const skipScrollRef = useRef(true);
 
+  const type = searchParams.get('type') === 'deals' ? 'deals' : null;
   const currentPage = parsePageParam(searchParams.get('page'));
   const perPage = parseSizeParam(searchParams.get('size'));
   const minPrice = searchParams.get('minPrice');
@@ -269,6 +276,7 @@ export default function InventoryPage() {
     const size = parseSizeParam(searchParams.get('size'));
     const sort = parseSortByParam(searchParams.get('sortBy'));
     fetchInventories({
+      type,
       currentPage: page,
       perPage: size,
       minPrice: searchParams.get('minPrice'),
@@ -307,6 +315,7 @@ export default function InventoryPage() {
     if (!pagination) return;
     if (currentPage <= totalPages) return;
     const next = buildInventoryQuery({
+      type,
       page: totalPages,
       perPage,
       minPrice,
@@ -325,6 +334,7 @@ export default function InventoryPage() {
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [
+    type,
     currentPage,
     totalPages,
     pagination,
@@ -364,6 +374,7 @@ export default function InventoryPage() {
     const q = draftQ.trim() || null;
     const rvType = draftRvType?.trim() || null;
     const next = buildInventoryQuery({
+      type,
       page: 1,
       perPage,
       minPrice,
@@ -385,6 +396,7 @@ export default function InventoryPage() {
 
   const applySort = (nextSort: SortByValue) => {
     const next = buildInventoryQuery({
+      type,
       page: 1,
       perPage,
       minPrice,
@@ -407,6 +419,7 @@ export default function InventoryPage() {
   const go = (p: number) => {
     const page = Math.min(Math.max(1, p), totalPages);
     const next = buildInventoryQuery({
+      type,
       page,
       perPage,
       minPrice,
@@ -440,123 +453,129 @@ export default function InventoryPage() {
   return (
     <section id="inventory" className="py-4 md:py-6">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="border-border bg-card mb-2 rounded-lg border p-4 md:mb-4 md:p-6">
-          <div className="flex flex-col items-start justify-start gap-4 md:flex-row md:items-center">
-            <div>
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Inventory</p>
-              <h2 className="text-foreground text-xl font-extrabold tracking-tight md:text-2xl">
-                Find Your RV and See It Live
-              </h2>
+        {type !== 'deals' && (
+          <div className="border-border bg-card mb-2 rounded-lg border p-4 md:mb-4 md:p-6">
+            <div className="flex flex-col items-start justify-start gap-4 md:flex-row md:items-center">
+              <div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Inventory</p>
+                <h2 className="text-foreground text-xl font-extrabold tracking-tight md:text-2xl">
+                  Find Your RV and See It Live
+                </h2>
+              </div>
+            </div>
+
+            <form
+              className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                applySearch();
+              }}
+            >
+              <div className="relative min-w-0 flex-1 space-y-1">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2"
+                  aria-hidden
+                />
+                <Input
+                  type="search"
+                  value={draftQ}
+                  onChange={(e) => setDraftQ(e.target.value)}
+                  placeholder="Make, model, or keyword"
+                  autoComplete="off"
+                  className="h-10 pr-3 pl-9 shadow-none"
+                />
+              </div>
+              <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-10 min-w-28 flex-1 cursor-pointer font-bold sm:flex-initial"
+                >
+                  Search
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-10 flex-1 cursor-pointer bg-neutral-50 font-bold text-neutral-900 hover:bg-neutral-100 hover:text-neutral-900 sm:flex-initial"
+                  onClick={clearFilters}
+                >
+                  <span className="hidden sm:inline">Clear filters</span>
+                  <span className="sm:hidden">Clear</span>
+                </Button>
+              </div>
+            </form>
+
+            <div className="border-border bg-background mt-3 flex flex-col overflow-hidden rounded-lg border md:flex-row md:items-stretch">
+              <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">RV Type</span>
+                <FilterMultiSelect
+                  options={bodies}
+                  selected={draftBodies}
+                  onChange={setDraftBodies}
+                  allLabel="All types"
+                  countNoun="types"
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
+              <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">Make</span>
+                <FilterMultiSelect
+                  options={makes}
+                  selected={draftMakes}
+                  onChange={setDraftMakes}
+                  allLabel="All makes"
+                  countNoun="makes"
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
+              <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">Model</span>
+                <FilterMultiSelect
+                  options={models}
+                  selected={draftModels}
+                  onChange={setDraftModels}
+                  allLabel="All models"
+                  countNoun="models"
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
+              <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">New/Used</span>
+                <FilterMultiSelect
+                  options={inventoryTypes}
+                  selected={draftInventoryTypes}
+                  onChange={setDraftInventoryTypes}
+                  allLabel="All RVs"
+                  countNoun="conditions"
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
+              <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">Location</span>
+                <LocationMultiSelect
+                  selected={draftLocations}
+                  onChange={setDraftLocations}
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col px-2 py-1.5 md:px-4 md:py-3">
+                <span className="text-muted-foreground text-xs font-medium">Sort By</span>
+                <FilterSortSelect
+                  value={sortBy}
+                  onChange={applySort}
+                  triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  contentClassName="min-w-[240px]"
+                />
+              </div>
             </div>
           </div>
-
-          <form
-            className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              applySearch();
-            }}
-          >
-            <div className="relative min-w-0 flex-1 space-y-1">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2"
-                aria-hidden
-              />
-              <Input
-                type="search"
-                value={draftQ}
-                onChange={(e) => setDraftQ(e.target.value)}
-                placeholder="Make, model, or keyword"
-                autoComplete="off"
-                className="h-10 pr-3 pl-9 shadow-none"
-              />
-            </div>
-            <div className="flex w-full shrink-0 gap-2 sm:w-auto">
-              <Button type="submit" size="lg" className="h-10 min-w-28 flex-1 cursor-pointer font-bold sm:flex-initial">
-                Search
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="h-10 flex-1 cursor-pointer bg-neutral-50 font-bold text-neutral-900 hover:bg-neutral-100 hover:text-neutral-900 sm:flex-initial"
-                onClick={clearFilters}
-              >
-                <span className="hidden sm:inline">Clear filters</span>
-                <span className="sm:hidden">Clear</span>
-              </Button>
-            </div>
-          </form>
-
-          <div className="border-border bg-background mt-3 flex flex-col overflow-hidden rounded-lg border md:flex-row md:items-stretch">
-            <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">RV Type</span>
-              <FilterMultiSelect
-                options={bodies}
-                selected={draftBodies}
-                onChange={setDraftBodies}
-                allLabel="All types"
-                countNoun="types"
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-            <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">Make</span>
-              <FilterMultiSelect
-                options={makes}
-                selected={draftMakes}
-                onChange={setDraftMakes}
-                allLabel="All makes"
-                countNoun="makes"
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-            <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">Model</span>
-              <FilterMultiSelect
-                options={models}
-                selected={draftModels}
-                onChange={setDraftModels}
-                allLabel="All models"
-                countNoun="models"
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-            <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">New/Used</span>
-              <FilterMultiSelect
-                options={inventoryTypes}
-                selected={draftInventoryTypes}
-                onChange={setDraftInventoryTypes}
-                allLabel="All RVs"
-                countNoun="conditions"
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-            <div className="border-border flex min-w-0 flex-1 flex-col border-b px-2 py-1.5 md:border-r md:border-b-0 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">Location</span>
-              <LocationMultiSelect
-                selected={draftLocations}
-                onChange={setDraftLocations}
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col px-2 py-1.5 md:px-4 md:py-3">
-              <span className="text-muted-foreground text-xs font-medium">Sort By</span>
-              <FilterSortSelect
-                value={sortBy}
-                onChange={applySort}
-                triggerClassName="w-full justify-between rounded-none border-0 mt-1 shadow-none hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                contentClassName="min-w-[240px]"
-              />
-            </div>
-          </div>
-        </div>
+        )}
 
         {error ? <p className="text-destructive text-center text-sm">{error}</p> : null}
 

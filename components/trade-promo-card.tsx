@@ -2,7 +2,7 @@ import { Handshake } from 'lucide-react';
 import { useViewProWidget } from '@/components/view-pro-widget-provider';
 
 export function TradePromoCard() {
-  const { open } = useViewProWidget();
+  const { isAvailable, open } = useViewProWidget();
 
   return (
     <article className="flex h-full min-h-80 flex-col items-center justify-center rounded-2xl border border-neutral-200/80 bg-white px-10 py-12 text-center shadow-md">
@@ -12,13 +12,15 @@ export function TradePromoCard() {
         <p className="text-sm leading-relaxed text-neutral-500">
           Get a competitive offer and upgrade effortlessly. Quick, easy, and transparent!
         </p>
-        <button
-          type="button"
-          className="mt-1 w-full cursor-pointer rounded-md border border-teal-800 bg-transparent px-5 py-2.5 text-sm font-semibold text-teal-800 transition-colors hover:bg-teal-800/10"
-          onClick={open}
-        >
-          Trade My RV
-        </button>
+        {isAvailable && (
+          <button
+            type="button"
+            className="mt-1 w-full cursor-pointer rounded-md border border-teal-800 bg-transparent px-5 py-2.5 text-sm font-semibold text-teal-800 transition-colors hover:bg-teal-800/10"
+            onClick={open}
+          >
+            Trade My RV
+          </button>
+        )}
       </div>
     </article>
   );

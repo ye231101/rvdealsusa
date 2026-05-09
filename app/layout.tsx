@@ -11,7 +11,7 @@ import { SiteFooter } from '@/components/site-footer';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'La Mesa RV',
+  title: 'RV Deals USA',
   description:
     'Tour hundreds of RVs from your couch. Live video walkthroughs, expert advice, and the best deals - no signup required.',
 };

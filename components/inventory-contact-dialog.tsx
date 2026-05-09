@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Loader2,
   Lock,
@@ -26,8 +27,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useViewProWidget } from '@/components/view-pro-widget-provider';
 import { api } from '@/lib/api';
-import { cn, formatPrice } from '@/lib/utils';
-import type { InventoryUnit, ChatGPTResponse } from '@/lib/types';
+import { cn, formatPrice, getInventoryPricing } from '@/lib/utils';
+import { mapInventoryItem, type InventoryUnit, type ChatGPTResponse } from '@/lib/types';
 
 const PHONE_TEL = 'tel:1-786-570-8584';
 const MESSAGE_MAX = 300;
@@ -36,7 +37,7 @@ const inquirySchema = z.object({
   name: z.string().min(1, 'Enter your name').max(120),
   email: z.string().email('Enter a valid email').max(254),
   phone: z.string().max(40).optional(),
-  message: z.string().min(1, 'Enter a message').max(MESSAGE_MAX, `Max ${MESSAGE_MAX} characters`),
+  message: z.string().max(MESSAGE_MAX, `Max ${MESSAGE_MAX} characters`).optional(),
 });
 
 type InquiryForm = z.infer<typeof inquirySchema>;
@@ -53,6 +54,7 @@ type ChatMessage = {
   id: string;
   role: 'assistant' | 'user';
   text: string;
+  inventories?: InventoryUnit[];
 };
 
 const QUALIFICATION_QUESTIONS = [
@@ -66,6 +68,18 @@ function unitThumbnailSrc(unit: InventoryUnit): string {
   if (unit.images?.length) return unit.images[0]!;
   if (unit.defaultImageUrl) return unit.defaultImageUrl;
   return '/images/photos_coming_soon.jpg';
+}
+
+function inventoryResultText(total: number): string {
+  if (total <= 0) return "I couldn't find matching RVs right now. Try broadening your search.";
+  if (total === 1) return 'I found 1 matching RV for you.';
+  return `I found ${total} matching RVs for you.`;
+}
+
+function inventoryPriceText(unit: InventoryUnit): string {
+  const pricing = getInventoryPricing(unit);
+  if (pricing.isTooLowToShow || pricing.displayPrice <= 0) return 'Call for price';
+  return formatPrice(pricing.showDetailedBreakdown ? pricing.netPrice : pricing.displayPrice);
 }
 
 function estimatedPriceRangeText(unit: InventoryUnit): string {
@@ -148,15 +162,12 @@ export function InventoryContactDialog({ open, onOpenChange, unit }: InventoryCo
   const onSubmit = async (data: InquiryForm) => {
     setSubmitError(null);
     try {
-      const payload: { name: string; email: string; phone?: string; message: string } = {
+      const payload: { name: string; email: string; phone?: string; message?: string } = {
         name: data.name.trim(),
         email: data.email.trim(),
-        message: data.message.trim(),
+        phone: data.phone?.trim() ?? undefined,
+        message: data.message?.trim() ?? undefined,
       };
-      const phone = data.phone?.trim();
-      if (phone) {
-        payload.phone = phone;
-      }
       await api.post('contact', payload);
       setLeadName(payload.name.split(' ')[0] || payload.name);
       setStep('qualify');
@@ -205,7 +216,19 @@ export function InventoryContactDialog({ open, onOpenChange, unit }: InventoryCo
 
     try {
       const res = (await api.post('chatgpt/chat', { message })) as ChatGPTResponse;
-      setThreadMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'assistant', text: res.data.reply }]);
+      const inventories = Array.isArray(res.data.inventories) ? res.data.inventories.map(mapInventoryItem) : [];
+      const resultTotal = res.data.pagination?.total ?? inventories.length;
+      const text = res.data.reply ?? inventoryResultText(resultTotal);
+
+      setThreadMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text,
+          inventories,
+        },
+      ]);
     } catch {
       setThreadMessages((prev) => [
         ...prev,
@@ -359,7 +382,7 @@ export function InventoryContactDialog({ open, onOpenChange, unit }: InventoryCo
                     className="text-foreground flex items-center gap-2 text-sm font-medium"
                   >
                     <MessageSquare className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                    What can we help you with?
+                    What can we help you with? (Optional)
                   </Label>
                   <div className="relative">
                     <Textarea
@@ -422,9 +445,7 @@ export function InventoryContactDialog({ open, onOpenChange, unit }: InventoryCo
                   </div>
                   <div className="min-w-0">
                     <DialogTitle className="text-lg leading-none font-bold">AI Assistant</DialogTitle>
-                    <DialogDescription className="mt-1 text-xs text-slate-300">
-                      Your La Mesa RV AI Assistant
-                    </DialogDescription>
+                    <DialogDescription className="mt-1 text-xs text-slate-300">Your AI Assistant</DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
@@ -583,13 +604,55 @@ export function InventoryContactDialog({ open, onOpenChange, unit }: InventoryCo
                   ) : null}
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm',
+                      'max-w-[85%] text-sm',
                       message.role === 'assistant'
-                        ? 'rounded-tl-md bg-slate-100 text-slate-800'
-                        : 'rounded-tr-md bg-blue-600 text-white',
+                        ? 'space-y-2 text-slate-800'
+                        : 'rounded-2xl rounded-tr-md bg-blue-600 px-3.5 py-2.5 text-white shadow-sm',
                     )}
                   >
-                    {message.text}
+                    {message.role === 'assistant' ? (
+                      <>
+                        <div className="rounded-2xl rounded-tl-md bg-slate-100 px-3.5 py-2.5 shadow-sm">
+                          {message.text}
+                        </div>
+                        {message.inventories?.length ? (
+                          <div className="space-y-2">
+                            {message.inventories.map((inventory) => (
+                              <Link
+                                key={inventory.id}
+                                href={`/inventory/${inventory.id}`}
+                                target="_blank"
+                                className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md"
+                              >
+                                <div className="flex gap-3 p-2.5">
+                                  <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                                    <Image
+                                      src={unitThumbnailSrc(inventory)}
+                                      alt={inventory.title}
+                                      fill
+                                      className="object-cover"
+                                      sizes="96px"
+                                      unoptimized
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <p className="line-clamp-2 text-sm leading-snug font-semibold text-slate-900">
+                                      {inventory.title}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      Stock# {inventory.stockNumber} | {inventory.location}
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-950">{inventoryPriceText(inventory)}</p>
+                                  </div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      message.text
+                    )}
                   </div>
                 </div>
               ))}

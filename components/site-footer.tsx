@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { Phone, Clock, Mail } from 'lucide-react';
+import { Phone, Mail, Globe } from 'lucide-react';
 
 const locationGruops = [
   {
@@ -41,20 +40,21 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-12 md:gap-8">
           <div className="md:col-span-3">
             <Link href="/" className="inline-block">
-              <Image
-                src="/logo.svg"
-                alt="La Mesa RV"
-                width={160}
-                height={32}
-                className="h-8 w-auto brightness-0 invert"
-              />
+              <span className="inline-flex w-max flex-col items-stretch leading-none">
+                <span className="text-3xl font-extrabold tracking-tight">
+                  <span className="text-white">RV</span>
+                  <span className="text-primary">DEALS</span>
+                </span>
+                <span className="flex w-full items-center gap-2">
+                  <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+                  <span className="shrink-0 text-xs font-bold tracking-wide text-white uppercase">USA</span>
+                  <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+                </span>
+              </span>
             </Link>
             <p className="text-secondary-foreground/60 mt-4 text-xs leading-relaxed">
-              Note: not all RV brands are available at all La Mesa RV locations. Prices subject to change without notice
-              and all advertised prices exclude government fees and taxes, any finance charges, any dealer document
-              processing charge ($85 in California; $1,495 in Florida, Arizona and New Mexico), any electronic filing
-              charge ($195 in Florida; $35 in New Mexico), and any emission testing charge. RV lengths are not an exact
-              measurement of the unit.
+              RV Deals USA connects you with great RVs and competitive prices using inventory from La Mesa RV and our
+              participating dealership partners.
             </p>
           </div>
 
@@ -63,23 +63,37 @@ export function SiteFooter() {
               <h3 className="mb-4 text-sm font-bold tracking-wider uppercase">Contact Us</h3>
               <ul className="text-secondary-foreground/60 flex list-none flex-wrap items-center gap-x-8 gap-y-2 p-0 text-sm">
                 <li>
-                  <a href="tel:1-786-570-8584" className="hover:text-primary flex items-center gap-2 transition-colors">
-                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                    (786) 570-8584
+                  <a href="tel:1-786-570-8584" className="flex items-center gap-2 transition-colors">
+                    <span className="border-primary text-primary flex size-10 items-center justify-center rounded-full border-2">
+                      <Phone className="size-5 shrink-0" strokeWidth={2} />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-secondary-foreground text-base">(786) 570-8584</span>
+                      <span className="text-secondary-foreground/60 text-sm">Mon-Sat 9AM-6PM</span>
+                    </div>
                   </a>
                 </li>
                 <li>
-                  <a
-                    href="mailto:info@lamesarv.com"
-                    className="hover:text-primary flex items-center gap-2 transition-colors"
-                  >
-                    <Mail className="h-3.5 w-3.5 shrink-0" />
-                    info@lamesarv.com
+                  <a href="mailto:help@rvdealsusa.com" className="group flex items-center gap-2 transition-colors">
+                    <span className="border-primary text-primary flex size-10 items-center justify-center rounded-full border-2">
+                      <Mail className="size-5 shrink-0" strokeWidth={2} />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-secondary-foreground text-base">help@rvdealsusa.com</span>
+                      <span className="text-secondary-foreground/60 text-sm">We'll reply as soon as we can!</span>
+                    </div>
                   </a>
                 </li>
-                <li className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 shrink-0" />
-                  Mon-Sat 9AM-6PM
+                <li>
+                  <a href="https://rvdealsusa.com" className="group flex items-center gap-2 transition-colors">
+                    <span className="border-primary text-primary flex size-10 items-center justify-center rounded-full border-2">
+                      <Globe className="size-5 shrink-0" strokeWidth={2} />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-secondary-foreground text-base">rvdealsusa.com</span>
+                      <span className="text-secondary-foreground/60 text-sm">Shop our latest inventory</span>
+                    </div>
+                  </a>
                 </li>
               </ul>
             </div>
@@ -110,10 +124,10 @@ export function SiteFooter() {
       <div className="border-secondary-foreground/10 border-t">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-2 px-4 py-5 text-xs md:flex-row md:justify-between md:px-6">
           <p className="text-secondary-foreground/40">
-            &copy; {new Date().getFullYear()} La Mesa RV. All rights reserved.
+            Copyright &copy; {new Date().getFullYear()} RV Deals USA. All rights reserved.
           </p>
           <p className="text-secondary-foreground/40">
-            Powered by <span className="text-secondary-foreground/60 font-semibold">La Mesa RV</span>
+            Powered by <span className="text-secondary-foreground/60 font-semibold">ViewPro</span>
           </p>
         </div>
       </div>

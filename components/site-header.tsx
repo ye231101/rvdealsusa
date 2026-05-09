@@ -78,15 +78,21 @@ function HeaderSearch({ className }: { className?: string }) {
     }
   };
 
+  const openSearchMenu = () => {
+    clearCloseTimer();
+    setMenuOpen(true);
+  };
+
   useEffect(() => {
     setMenuOpen(false);
     clearCloseTimer();
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (!menuOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
         setMenuOpen(false);
         blurSearchInput();
       }
@@ -178,10 +184,8 @@ function HeaderSearch({ className }: { className?: string }) {
             className="relative h-10 rounded-full border-gray-200 bg-gray-100 pr-4 pl-10 shadow-none"
             autoComplete="off"
             onChange={(e) => onSearchInputChange(e.target.value)}
-            onFocus={() => {
-              clearCloseTimer();
-              setMenuOpen(true);
-            }}
+            onFocus={openSearchMenu}
+            onClick={openSearchMenu}
             onBlur={() => {
               clearCloseTimer();
               closeTimerRef.current = setTimeout(() => setMenuOpen(false), 120);
@@ -192,7 +196,7 @@ function HeaderSearch({ className }: { className?: string }) {
               className="absolute top-full right-0 left-0 z-10 mt-2 overflow-visible rounded-xl border border-neutral-200 bg-white shadow-lg"
               onMouseDown={(e) => e.preventDefault()}
             >
-              <div className="relative z-0 p-4" aria-hidden={searchResults.length > 0}>
+              <div className="relative z-0 p-4">
                 <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">RV types</p>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {SEARCH_RV_TYPES.map((cat) => (
@@ -262,12 +266,20 @@ export function SiteHeader() {
       <div className="mx-auto flex h-full w-full justify-center px-4 py-3 sm:px-6 md:px-10 md:py-4">
         {/* Mobile */}
         <div className="flex flex-1 flex-col gap-3 md:hidden">
-          <div className="relative flex min-h-10 items-center">
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Link href="/" className="pointer-events-auto min-w-0 shrink" aria-label="La Mesa RV">
-                <Image src="/logo.svg" alt="La Mesa RV" width={200} height={40} className="h-8 w-auto" priority />
-              </Link>
-            </div>
+          <div className="relative flex min-h-10 items-center justify-center">
+            <Link href="/" className="pointer-events-auto absolute min-w-0 shrink">
+              <span className="inline-flex w-max flex-col items-stretch leading-none">
+                <span className="text-3xl font-extrabold tracking-tight">
+                  <span className="text-black">RV</span>
+                  <span className="text-primary">DEALS</span>
+                </span>
+                <span className="flex w-full items-center gap-2">
+                  <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+                  <span className="shrink-0 text-xs font-bold tracking-wide text-black uppercase">USA</span>
+                  <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+                </span>
+              </span>
+            </Link>
 
             <div className="ml-auto shrink-0">
               <PhoneBlock compact />
@@ -279,8 +291,18 @@ export function SiteHeader() {
 
         {/* Desktop */}
         <div className="hidden w-full min-w-0 items-center gap-4 sm:gap-6 md:flex md:gap-10">
-          <Link href="/" className="min-w-0 shrink-0" aria-label="La Mesa RV">
-            <Image src="/logo.svg" alt="La Mesa RV" width={200} height={40} className="h-10 w-auto" />
+          <Link href="/" className="min-w-0 shrink-0">
+            <span className="inline-flex w-max flex-col items-stretch leading-none">
+              <span className="text-3xl font-extrabold tracking-tight">
+                <span className="text-black">RV</span>
+                <span className="text-primary">DEALS</span>
+              </span>
+              <span className="flex w-full items-center gap-2">
+                <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+                <span className="shrink-0 text-xs font-bold tracking-wide text-black uppercase">USA</span>
+                <span className="bg-primary h-0.5 min-h-px min-w-4 flex-1" aria-hidden />
+              </span>
+            </span>
           </Link>
 
           <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4 md:gap-6">

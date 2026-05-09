@@ -26,8 +26,8 @@ export interface InventoryUnit {
   wI_MapPrice: number;
   wI_Mileage: number;
   wI_SlideOuts: string;
-  wI_SalePrice?: number | null;
-  websitePrice?: number | null;
+  wI_SalePrice: number;
+  websitePrice: number;
   priceFlag?: string | null;
   rebate?: {
     amount: number;
@@ -68,8 +68,8 @@ export interface InventoryItem {
   wi_map_price: number;
   wi_mileage: number;
   wi_slide_outs: string;
-  wi_sale_price?: number | null;
-  website_price?: number | null;
+  wi_sale_price: number;
+  website_price: number;
   price_flag?: string | null;
   rebate_amount?: number | null;
   rebate_enddate?: number | null;
@@ -160,7 +160,14 @@ export interface ChatGPTResponse {
   code: number;
   message: string;
   data: {
-    intent: string;
-    reply: string;
+    mode?: 'general' | 'rag';
+    intent?: string;
+    reply?: string;
+    inventories?: InventoryItem[];
+    pagination?: InventoryPagination;
+    retrieval?: {
+      candidate_count?: number;
+      chunk_count?: number;
+    };
   };
 }
